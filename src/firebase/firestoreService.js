@@ -1,102 +1,103 @@
-// ─────────────────────────────────────────────────────────────
 // src/firebase/firestoreService.js
-// All Firestore read/write operations live here.
-// Components never import `db` directly — they use these helpers.
-// ─────────────────────────────────────────────────────────────
 
+// ✅ FIX: All imports at top — `setDoc` was previously mid-file (syntax error)
 import {
   collection,
   doc,
   onSnapshot,
   addDoc,
   updateDoc,
+  setDoc,
   serverTimestamp,
   query,
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { db } from './config';
+import { firestore } from './config';
 
-// ── Subscribe to real-time dogs collection ────────────────────
-// callback receives the array of dog objects every time data changes.
+// ── Helper: map Firestore doc → app dog object
+function mapDog(docSnap) {
+  const d = docSnap.data();
+  return {
+    id:        docSnap.id,
+    beltId:    d.beltId   || docSnap.id,
+    name:      d.name     || 'Unknown',
+    breed:     d.breed    || 'Mixed',
+    emoji:     d.emoji    || '🐕',
+    risk:      d.risk     || 'low',
+    r:         d.r        || 0,
+    activity:  d.activity || 'Resting',
+    zone:      d.zone     || 'Unknown',
+    batt:      d.batt     ?? 0,
+    lat:       d.lat      ?? 10.0704,
+    lng:       d.lng      ?? 76.3680,
+    updatedAt: d.updatedAt || null,
+  };
+}
+
+// ── Subscribe to dogs (real-time)
 export function subscribeToDogs(callback) {
-  const q = query(collection(db, 'dogs'), orderBy('name'));
-  return onSnapshot(q, (snap) => {
-    const dogs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(dogs);
-  });
+  try {
+    const q = query(collection(firestore, 'dogs'), orderBy('name'));
+    return onSnapshot(q, (snap) => {
+      callback(snap.docs.map(mapDog));
+    });
+  } catch (err) {
+    console.error('❌ subscribeToDogs error:', err);
+    return () => {}; // always return a valid unsubscribe function
+  }
 }
 
-// ── Subscribe to live alerts (newest first) ───────────────────
+// ── Subscribe to alerts (real-time, newest first)
 export function subscribeToAlerts(callback) {
-  const q = query(collection(db, 'alerts'), orderBy('time', 'desc'), limit(20));
-  return onSnapshot(q, (snap) => {
-    const alerts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(alerts);
-  });
+  try {
+    const q = query(
+      collection(firestore, 'alerts'),
+      orderBy('time', 'desc'),
+      limit(20)
+    );
+    return onSnapshot(q, (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+  } catch (err) {
+    console.error('❌ subscribeToAlerts error:', err);
+    return () => {};
+  }
 }
 
-// ── Push a new alert document ─────────────────────────────────
+// ── Push a new alert document
 export async function pushAlert(alertData) {
-  await addDoc(collection(db, 'alerts'), {
-    ...alertData,
-    time: serverTimestamp(),
-  });
+  try {
+    await addDoc(collection(firestore, 'alerts'), {
+      ...alertData,
+      time: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('❌ pushAlert error:', err);
+  }
 }
 
-// ── Update a single dog document ─────────────────────────────
+// ── Update an existing dog document
 export async function updateDog(docId, data) {
-  await updateDoc(doc(db, 'dogs', docId), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    await updateDoc(doc(firestore, 'dogs', docId), {
+      ...data,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('❌ updateDog error:', err);
+  }
 }
 
-// ── Push simulated dog reading ────────────────────────────────
+// ── Upsert dog by beltId (create or update via merge)
 export async function pushDogReading(dogData) {
-  await addDoc(collection(db, 'dogs'), {
-    ...dogData,
-    createdAt: serverTimestamp(),
-  });
+  try {
+    await setDoc(
+      doc(firestore, 'dogs', dogData.beltId),
+      { ...dogData, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) {
+    console.error('❌ pushDogReading error:', err);
+  }
 }
-
-/*
- ─────────────────────────────────────────────────────────────
-  FIRESTORE SAMPLE DATA STRUCTURE
- ─────────────────────────────────────────────────────────────
-
-  Collection: dogs/{dogId}
-  ─────────────────────────
-  {
-    beltId:    "BLT-001",          // string
-    name:      "Rusty",            // string
-    breed:     "Mixed",            // string
-    emoji:     "🐕",               // string
-    risk:      "high",             // "high" | "medium" | "low"
-    r:         87,                 // number 0-100 (aggression score)
-    activity:  "Aggressive",       // string
-    zone:      "Zone 3 – Market St",
-    batt:      72,                 // number 0-100 (battery %)
-    mapX:      28,                 // number 0-100 (% x on map)
-    mapY:      32,                 // number 0-100 (% y on map)
-    updatedAt: <Timestamp>
-  }
-
-  Collection: alerts/{alertId}
-  ─────────────────────────────
-  {
-    level:   "high",               // "high" | "medium" | "info"
-    icon:    "🔴",
-    title:   "BLT-001 Rusty — High Aggression",
-    msg:     "R-value spiked to 87.",
-    time:    <Timestamp>
-  }
-
-  Collection: users/{userId}
-  ────────────────────────────
-  {
-    name:  "Admin User",
-    email: "admin@streetguard.io",
-    role:  "admin"                 // "admin" | "operator" | "viewer"
-  }
-*/

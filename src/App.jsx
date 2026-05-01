@@ -1,8 +1,7 @@
-// ─────────────────────────────────────────────────────────────
 // src/App.jsx
-// Root component: provides global context, renders layout
-// (Sidebar + Dashboard), and all overlay components.
-// ─────────────────────────────────────────────────────────────
+//
+// Fix: DogModal no longer receives `onTriggerShock` prop — it was removed
+// from the component signature (it read from context directly instead).
 
 import { useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
@@ -15,17 +14,15 @@ import ToastContainer from './components/ToastContainer';
 
 import useLiveData from './hooks/useLiveData';
 
-/* ── Inner app that can use context ── */
 function AppInner() {
-  const data     = useLiveData();
-  const { addToast, openShock } = useApp();
+  const data = useLiveData();
+  const { addToast } = useApp();
 
-  // Welcome toasts on mount
   useEffect(() => {
     const t1 = setTimeout(() => addToast('✓ System connected. 14 belts online.', 'success'), 800);
-    const t2 = setTimeout(() => addToast('⚡ 3 high-risk dogs require attention.', 'error'),   2200);
+    const t2 = setTimeout(() => addToast('⚡ 3 high-risk dogs require attention.', 'error'), 2200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (data.loading) {
@@ -34,7 +31,7 @@ function AppInner() {
         <div className="text-center">
           <div className="text-5xl mb-4 animate-pulse">🐾</div>
           <p className="font-heading text-white text-xl font-bold tracking-widest">StreetGuard</p>
-          <p className="font-mono-sg text-muted text-[11px] tracking-[3px] mt-2 uppercase">
+          <p className="font-mono-sg text-[11px] tracking-[3px] mt-2 uppercase" style={{ color: '#4a6272' }}>
             Initialising systems…
           </p>
         </div>
@@ -45,10 +42,9 @@ function AppInner() {
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#07090d' }}>
       <Sidebar />
-
       <Dashboard data={data} />
 
-      {/* Overlays */}
+      {/* ✅ DogModal needs no props — reads context directly */}
       <DogModal />
       <ShockConfirm onConfirm={data.triggerShock} />
       <ToastContainer />

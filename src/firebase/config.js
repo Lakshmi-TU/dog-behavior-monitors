@@ -1,26 +1,20 @@
-// ─────────────────────────────────────────────────────────────
-// src/firebase/config.js
-// Replace the placeholder values below with your own Firebase
-// project credentials from:
-//   https://console.firebase.google.com
-//   Project Settings → Your apps → SDK setup and configuration
-// ─────────────────────────────────────────────────────────────
-
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey: "AIzaSyAm5Eyfmh4hNFXi4ZEpaCl5qb6artt6Nsg",
+  authDomain: "dog-aggression.firebaseapp.com",
+  databaseURL: "https://dog-aggression-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "dog-aggression",
+  storageBucket: "dog-aggression.firebasestorage.app",
+  messagingSenderId: "891717369943",
+  appId: "1:891717369943:web:56df6cf029462ca94be312",
 };
 
-// Initialize Firebase app
 const app = initializeApp(firebaseConfig);
 
-// Export Firestore database instance
-export const db = getFirestore(app);
-export default app;
+
+// ✅ EXPORT THESE (IMPORTANT)
+export const db = getDatabase(app);
+export const firestore = getFirestore(app);
